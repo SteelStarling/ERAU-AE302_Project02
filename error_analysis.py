@@ -25,6 +25,8 @@ BETA_STEP  = 10
 
 HIGHLIGHT_VALUE = 0.1
 
+GRID_STATUS = True
+
 # ------------ GENERAL PLOTTING ------------
 
 def fig_settings(fig: plt.figure, figure_name: str) -> None:
@@ -36,33 +38,55 @@ def fig_settings(fig: plt.figure, figure_name: str) -> None:
 def plot_settings(ax: plt.Axes, table_name: str) -> None:
     """Initialize the provided plot"""
     ax.set_title(table_name)
+
+    # x-axis
     ax.set_xlabel(r"$M_1$")
-    ax.set_ylabel(r"Shock-wave angle $\beta$, degrees")
 
     x_ticks = list(range(MACH_START, MACH_END + MACH_STEP, MACH_STEP))
     ax.set_xticks(x_ticks)
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
 
+    # y-axis
+    ax.set_ylabel(r"Shock-wave angle $\beta$, degrees")
+
     y_ticks = list(range(BETA_START, BETA_END + BETA_STEP, BETA_STEP))
     ax.set_yticks(y_ticks)
     ax.yaxis.set_minor_locator(AutoMinorLocator(2))
+
+    # Add grid if requested
+    ax.grid(GRID_STATUS)
 
 
 def plot_absolute_error(ax: plt.Axes, name: str, error: np.meshgrid, \
                         mach_grid: np.linspace, beta_grid: np.linspace) -> None:
     """Plots the provided absolute error in the provided range"""
+
+    # Initialize plots
+    plot_settings(ax, name)
+
     plot = ax.pcolormesh(mach_grid, beta_grid, error)
     cbar = plt.colorbar(plot, ax=ax, label=r"$\epsilon$")
 
-    cbar.set_ticks([])
-    cbar.set_ticklabels([])
+    # Moving offset text is an open problem in MatPlotLib
+    # (https://github.com/matplotlib/matplotlib/issues/4476)
+    # Due to this, I am setting this up in a particularly janky way,
+    # because it is a requirement for the plot design...I'd recommend
+    # against using this for other reasons than that.
+    #
+    # This value is hard coded and fine tuned for this size...which
+    # absolutely sucks.
+    #
+    # TL;DR: Do as I say, not as I do
 
-    plot_settings(ax, name)
+    cbar.ax.yaxis.offsetText.set_position((4, 0))
 
 
 def plot_relative_error(ax: plt.Axes, name: str, error: np.meshgrid, \
                         mach_grid: np.linspace, beta_grid: np.linspace) -> None:
     """Plots the provided relative error in the provided range"""
+
+    # Initialize plots
+    plot_settings(ax, name)
 
     # remove all values over 1.0
     error_clipped = np.ma.masked_greater(error, 1.0)
@@ -74,8 +98,6 @@ def plot_relative_error(ax: plt.Axes, name: str, error: np.meshgrid, \
     # fix settings
     cbar_ticks = [x / 10 for x in range(0, 11)]
     cbar.set_ticks(cbar_ticks)
-
-    plot_settings(ax, name)
 
     # highlight region
     ax.contourf(mach_grid, beta_grid, error_clipped, [0, HIGHLIGHT_VALUE], \
@@ -89,7 +111,10 @@ def plot_intersection(ax: plt.Axes, pressure_region: np.meshgrid, density_region
                       mach_grid: np.linspace, beta_grid: np.linspace) -> None:
     """Plots the intersection region where both regions are less than HIGHLIGHT_VALUE"""
 
-    plot_settings(ax, f"Intersection where Pressure & Density $\\epsilon_{{rel}} \\leq$ {HIGHLIGHT_VALUE}")
+    name = f"Intersection where Pressure & Density $\\epsilon_{{rel}} \\leq$ {HIGHLIGHT_VALUE}"
+
+    # Initialize plots
+    plot_settings(ax, name)
 
     # highlight region (pressure)
     ax.contourf(mach_grid, beta_grid, pressure_region, [0, HIGHLIGHT_VALUE], \
